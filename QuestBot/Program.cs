@@ -250,19 +250,20 @@ namespace QuestBot
         //Print's help
         private void PrintHelp(MessageEventArgs e)
         {
-            string msg = "QuestBot commands: \n" +
-                         "General commands:" +
-                         ".help                Show this help text\n" +
-                         ".rand [Num1]-[Num2]  Generate a random number between Num1 and Num2\n" +
-                         ".roll [Num]?d[Num](+|-[Num])?[A|D]?\n" +
+            string msg = "**QuestBot commands:** \n\n" +
+                         "*General commands:*\n" +
+                         "**.help**                      Show this help text\n" +
+                         "**.rand [Num1]-[Num2]**\n" +
+                         "    Generate a random number between Num1 and Num2\n" +
+                         "**.roll [Num]?d[Num](+|-[Num])?[A|D]?**\n" +
                          "    Roll a die with modifiers and advantage/disadvantage\n" +
                          "\nQuest Commands:\n" +
-                         ".startsession        Start a quest\n" +
-                         ".endsession          End a quest\n" +
-                         ".vote [Number]       Vote in a quest chapter\n" +
-                         ".other [String]      Give another answer than currently votable\n" +
-                         ".tally               Tally the current votes in this chapter\n" +
-                         ".next                Go to the next chapter in a quest\n" +
+                         "**.startsession**        Start a quest\n" +
+                         "**.endsession**          End a quest\n" +
+                         "**.vote [Number]**  Vote in a quest chapter\n" +
+                         "**.other [String]**     Give another answer than currently votable\n" +
+                         "**.tally**                      Tally the current votes in this chapter\n" +
+                         "**.next**                       Go to the next chapter in a quest\n" +
                          "\nQuesting information:\n" +
                          "To start a session, the quest giver runs '.startsession'. He/she is now " +
                          "in control of ending the quest and moving to the next chapter. " +

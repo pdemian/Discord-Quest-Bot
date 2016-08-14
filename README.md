@@ -29,3 +29,14 @@ If none of the options seem appealing the quest giver may allow other answers to
 A tally can be conducted once everyone has finished voting with '.tally' and the quest giver may move to the next chapter with '.next'.
 This resets all votes and voting can start again. When the session is done, the quest giver can finish the quest by typing '.endsession'.
 There can only be one session per channel at any time.
+
+## How to use
+1. Create a discord account for your bot.
+2. Login to your bot and add it to your discord server.
+3. Compile the code in Visual Studio or download one of the releases
+  * If you're downloading a release by following the instructions [here](https://github.com/pdemian/Discord-Quest-Bot/releases/tag/1.0)
+  * If you're compiling the source code
+     1. Download the source and open it in Visual Studio
+     2. Set build to Release and build
+4. Run, and type in the username/password of your bot when prompted.
+5. Have fun.
