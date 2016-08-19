@@ -5,7 +5,7 @@ using Discord;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
+using System.Collections.Generic;
 
 namespace QuestBot
 {
@@ -34,7 +34,7 @@ namespace QuestBot
 
     class Roll
     {
-        //For the following comments, example of a roll: 5d6 + 7 A
+        //For the following comments, example of a roll: 5d6d1 + 7 A
 
         //The number of dice (null is presumed 1 die roll), ex 5
         public int? NumDice = null;
@@ -46,6 +46,8 @@ namespace QuestBot
         public int ModNum = 0;
         //If we roll Advantage (true), Disadvantage (false) or neither (null), ex true
         public bool? Adv = null;
+        //How many dice do we drop?, ex 1
+        public int Drop = 0;
     }
 
     class Program : IDisposable
@@ -63,7 +65,7 @@ namespace QuestBot
 
         public Program(string bot_username, string bot_password)
         {
-            dieRegex = new Regex(@"^(?<NumDice>\d{0,2}) *[dD] *(?<Die>\d{1,2}) *((?<Mod>[+-]) *(?<ModNum>\d{1,3}))? *(?<Adv>[AaDd])?", RegexOptions.Compiled);
+            dieRegex = new Regex(@"^(?<NumDice>\d{0,2}) *d *(?<Die>\d{1,2}) *(d(?<Drop>\d{1,2}))? *((?<Mod>[+-]) *(?<ModNum>\d{1,3}))? *(?<Adv>adv|dis)?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
             randRegex = new Regex(@"^(?<From>\d{1,9}) *- *(?<To>\d{1,9})", RegexOptions.Compiled);
 
             rand = new Random();
@@ -98,6 +100,7 @@ namespace QuestBot
             }
             catch(Exception ex)
             {
+                try { e.Channel.SendMessage("An error occured. Try reformatting your query.");  } catch(Exception) { /* Silently handle */ }
                 Console.WriteLine("ERROR:" + ex.Message);
                 Console.WriteLine("ERROR:" + ex.StackTrace);
             }
@@ -255,8 +258,8 @@ namespace QuestBot
                          "**.help**                      Show this help text\n" +
                          "**.rand [Num1]-[Num2]**\n" +
                          "    Generate a random number between Num1 and Num2\n" +
-                         "**.roll [Num]?d[Num](+|-[Num])?[A|D]?**\n" +
-                         "    Roll a die with modifiers and advantage/disadvantage\n" +
+                         "**.roll [Num]?d[Num](d[Num])?(+|-[Num])?[Adv|Dis]?**\n" +
+                         "    Roll a die with modifiers, drops and advantage/dis.\n" +
                          "\n*Quest Commands:*\n" +
                          "**.startsession**        Start a quest\n" +
                          "**.endsession**          End a quest\n" +
@@ -291,7 +294,7 @@ namespace QuestBot
             }
 
             //Match the string to the regex
-            var randStr = e.Message.Text.Substring(6).Trim();
+            var randStr = e.Message.Text.Substring(5).Trim();
 
             Match m = randRegex.Match(randStr);
 
@@ -329,12 +332,12 @@ namespace QuestBot
         {
             if (e.Message.Text.Length < 6)
             {
-                e.Channel.SendMessage("Invalid roll. Expected [Num]?d[Num] (+|-[Num])? [A|D]?. Example '.roll d6' or '.roll 7d6 + 9 Advantage'");
+                e.Channel.SendMessage("Invalid roll. Expected [Num]?d[Num](d[Num])? (+|-[Num])? [Adv|Dis]?. Example '.roll d6 adv' or '.roll 4d6d1 + 1'");
                 return;
             }
 
             //Match the string to the regex
-            var rollStr = e.Message.Text.Substring(6).Trim();
+            var rollStr = e.Message.Text.Substring(5).Trim();
 
             Match m = dieRegex.Match(rollStr);
 
@@ -351,19 +354,28 @@ namespace QuestBot
                         //something, something, something not a master at writing regex
                         //Some of the groups get captured as empty if they are
                         //Which is perfectly ok...but we need to not add them if they are
-                        bool emptyStr = !string.IsNullOrEmpty(g.Value);
+                        bool notEmpty = !string.IsNullOrEmpty(g.Value);
 
-                        if (name == "NumDice" && emptyStr)
+                        if (name == "NumDice" && notEmpty)
                             roll.NumDice = int.Parse(g.Value);
                         else if (name == "Die")
                             roll.Die = int.Parse(g.Value);
-                        else if (name == "Mod" && emptyStr)
+                        else if (name == "Mod" && notEmpty)
                             roll.Mod = g.Value == "-" ? true : false;
-                        else if (name == "ModNum" && emptyStr)
+                        else if (name == "ModNum" && notEmpty)
                             roll.ModNum = int.Parse(g.Value);
-                        else if (name == "Adv" && emptyStr)
-                            roll.Adv = g.Value.ToLower() == "a";
+                        else if (name == "Adv" && notEmpty)
+                            roll.Adv = g.Value.ToLower() == "adv";
+                        else if (name == "Drop" && notEmpty)
+                            roll.Drop = int.Parse(g.Value);
                     }
+                }
+
+                if(((roll.NumDice == null || roll.NumDice == 0) && roll.Drop > 0)
+                    ||(roll.Drop >= roll.NumDice))
+                {
+                    e.Channel.SendMessage("Invalid number of dice dropped. Must be strictly less than the total number of dice rolled.");
+                    return;
                 }
 
                 string msg = "";
@@ -398,25 +410,51 @@ namespace QuestBot
                 //{y}d{x} = roll multiple dice
                 else if(roll.NumDice > 1)
                 {
-                    int[] rolls = { (roll.Mod ? -1 : 1) * roll.ModNum,
-                                    (roll.Mod ? -1 : 1) * roll.ModNum };
+                    List<int>[] fullRolls = new List<int>[2];
+
+                    //int[] rolls = { (roll.Mod ? -1 : 1) * roll.ModNum,
+                    //                (roll.Mod ? -1 : 1) * roll.ModNum };
 
                     //This whole section is ugly and it works!
                     //If we have to roll normally, only loops once, if we have to roll twice, it loops twice
                     for (int i = 0; i < 1 + (roll.Adv != null ? 1 : 0); i++)
                     {
-                        msg += "{ [";
+                        fullRolls[i] = new List<int>((int)roll.NumDice);
+
                         //generate X number of rolls, roll a number for that, add it to the current counter, 
-                        //and join it together as a string
-                        msg += string.Join("], [", Enumerable.Range(0, (int)roll.NumDice).Select(x => 
+                        for (int x = 0; x < roll.NumDice; x++)
                         {
                             int curr = NextInt(1, roll.Die + 1);
-                            rolls[i] += curr;
-                            return curr.ToString();
-                        } ).ToArray());
+                            fullRolls[i].Add(curr);
+                        }
+                        if (roll.Drop > 0)
+                        {
+                            msg += "{ [";
+                            msg += string.Join("], [", fullRolls[i].Select(x => x.ToString()));
+                            msg += "] } => ";
+                        }
+                        //drop the lowest if we must
+                        //Could make this powers of 2 more efficient if I sort 
+                        //and take (N - drop) rolls, but then the result is sorted
+                        for (int x = 0; x < roll.Drop; x++)
+                        {
+                            int indx = 0;
+                            for(int j = 1; j < fullRolls[i].Count; j++)
+                            {
+                                if (fullRolls[i][j] < fullRolls[i][indx])
+                                    indx = j;
+                            }
+
+                            fullRolls[i].RemoveAt(indx);
+                        }
+
+                        msg += "{ [";
+                        msg += string.Join("], [", fullRolls[i].Select(x => x.ToString()));
                         msg += "] }\n";
                     }
 
+                    int rollMod = (roll.Mod ? -1 : 1) * roll.ModNum;
+                    int[] rolls = fullRolls.Select(x => x == null ? -1 : x.Sum() + rollMod).ToArray();
 
                     msg += "= ";
                     if(roll.Adv == true)

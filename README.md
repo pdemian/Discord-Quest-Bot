@@ -8,7 +8,7 @@
 | ------------------------ | -------------------------------- | ------------- |
 | .help | Show this help text              | .help         |
 | .rand &#91;Num1&#93;-&#91;Num2&#93; | Generate a random number between Num1 and Num2 | .rand 1-100 |
-| .roll &#91;Num&#93;?d&#91;Num&#93;(+&#124;-&#91;Num&#93;)?&#91;A&#124;D&#93;? | Roll a die with optional modifiers and optional advantage/disadvantage | .roll 5d6 + 7 A | 
+| .roll &#91;Num&#93;?d&#91;Num&#93;(d&#91;Num&#93;)?(+&#124;-&#91;Num&#93;)?&#91;A&#124;D&#93;? | Roll a die with optional modifiers, droping of lowest dice, and advantage/disadvantage | .roll 4d6d1 + 7 A | 
 
 ### Quest Commands: 
 | Command                  | Description                      | Usage         |
